@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>RPG Live Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Inter, Arial, sans-serif; background:#0f1724;color:#e6eef8;margin:0;padding:20px; }
+    .card { background:#0b1220;padding:16px;border-radius:10px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+    .bar { height:14px;background:#0a2438;border-radius:8px;overflow:hidden;box-shadow:inset 0 -2px rgba(0,0,0,0.6); }
+    .fill { height:100%; background:linear-gradient(90deg,#16a34a,#06b6d4); transition: width 600ms ease; }
+    .small { font-size:13px;color:#9fb1c9; }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .btn { background:#134e4a;color:#e6fff8;padding:8px 12px;border-radius:8px;border:0;cursor:pointer; }
+    h1 { margin:0 0 8px 0; font-size:18px; }
+    .muted { color:#9fb1c9; font-size:13px; }
+    .grid { display:grid; grid-template-columns: 1fr 320px; gap:12px; align-items:start; }
+    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <div>
+        <h1 id="charName">Character</h1>
+        <div class="muted" id="lvxp">Lv 0 — 0 XP</div>
+      </div>
+      <div>
+        <button id="refreshBtn" class="btn">Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="small">XP Progress</div>
+        <div style="height:8px"></div>
+        <div class="bar"><div id="xpFill" class="fill" style="width:0%"></div></div>
+        <div style="height:8px"></div>
+        <div class="small" id="xpText">0 / 100</div>
+      </div>
+
+      <div class="card">
+        <div class="small">Energy</div>
+        <div style="height:8px"></div>
+        <div class="bar"><div id="energyFill" class="fill" style="width:0%;background:linear-gradient(90deg,#ffb703,#fb8500)"></div></div>
+        <div style="height:8px"></div>
+        <div class="small" id="energyText">0 / 0</div>
+      </div>
+
+      <div class="card">
+        <div class="small">Inventory</div>
+        <ul id="inventoryList" style="margin:8px 0 0 12px;padding:0;list-style:disc;"></ul>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="small">Recent Encounters</div>
+        <ul id="encounterList" style="margin:8px 0 0 12px;padding:0;list-style:none;"></ul>
+      </div>
+
+      <div class="card">
+        <div class="row"><div class="small">Actions</div><div><button id="triggerEncounter" class="btn">Roll Encounter</button></div></div>
+        <div style="height:8px"></div>
+        <div class="small">Manual actions — these call server endpoints</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CHAR_ID = new URLSearchParams(location.search).get("char") || ""; // pass ?char=<id> when embedding
+    const POLL = 5000; // ms
+
+    const state = { char: null };
+
+    async function fetchJson(path) {
+      const res = await fetch(path);
+      return res.json();
+    }
+
+    async function refresh() {
+      if (!CHAR_ID) {
+        document.getElementById("charName").textContent = "No char id (add ?char=<page_id>)";
+        return;
+      }
+      const [cRes, eRes, qRes] = await Promise.all([
+        fetchJson(`/api/character/${CHAR_ID}/summary`),
+        fetchJson(`/api/encounters/recent/6`),
+        fetchJson(`/api/quests/daily/${CHAR_ID}`)
+      ]);
+
+      if (cRes.ok) {
+        const s = cRes.summary;
+        state.char = s;
+        document.getElementById("charName").textContent = s.name + " (Lv " + s.level + ")";
+        document.getElementById("lvxp").textContent = `Lv ${s.level} — ${s.currentXP} XP`;
+        const xpPct = Math.min(100, Math.round((s.xpProgress || 0) * 100));
+        document.getElementById("xpFill").style.width = xpPct + "%";
+        document.getElementById("xpText").textContent = `${s.currentXP} / ${s.nextLevelXP ?? "?"}`;
+
+        const energyPct = Math.min(100, Math.round((s.energy / s.maxEnergy)*100 || 0));
+        document.getElementById("energyFill").style.width = energyPct + "%";
+        document.getElementById("energyText").textContent = `${s.energy} / ${s.maxEnergy}`;
+
+        // inventory
+        const inv = s.inventory || [];
+        const list = document.getElementById("inventoryList");
+        list.innerHTML = "";
+        for (const it of inv) {
+          const li = document.createElement("li");
+          li.textContent = `${it.itemName || "Item"} x${it.quantity} ${it.equipped ? "(Equipped)" : ""}`;
+          list.appendChild(li);
+        }
+      }
+
+      if (eRes.ok) {
+        const list = document.getElementById("encounterList");
+        list.innerHTML = "";
+        for (const en of eRes.encounters) {
+          const li = document.createElement("li");
+          li.style.marginBottom = "8px";
+          li.innerHTML = `<strong>${en.name}</strong><div class="small">${en.xp} XP • ${en.gold} Gold • ${new Date(en.timestamp).toLocaleString()}</div>`;
+          list.appendChild(li);
+        }
+      }
+      if (qRes.ok) {
+         // you can show daily quests similarly
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", refresh);
+    document.getElementById("triggerEncounter").addEventListener("click", async () => {
+      if (!CHAR_ID) return alert("add ?char=<page_id> to URL");
+      await fetch(`/api/encounters/roll/${CHAR_ID}`, { method: "POST" }).catch(e=>console.error(e));
+      refresh();
+    });
+
+    refresh();
+    setInterval(refresh, POLL);
+  </script>
+</body>
+</html>
