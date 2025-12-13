@@ -2,45 +2,73 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const DAILY_DB = process.env.DAILY_QUESTS_DB;
+console.log("🔥 resetDailyQuests.js loaded");
 
-// --------------------------------
-// Fetch all daily quests
-// --------------------------------
-async function fetchDailyQuests() {
-  const res = await notion.databases.query({
-    database_id: DAILY_DB
-  });
-  return res.results;
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
+
+const DAILY_QUESTS_DB = process.env.DAILY_QUESTS_DB;
+
+// -----------------------------
+// Safe database query wrapper
+// -----------------------------
+async function queryDatabase(databaseId) {
+  // New SDK (v2+)
+  if (notion.databases?.query) {
+    return notion.databases.query({
+      database_id: databaseId,
+    });
+  }
+
+  // Old SDK (fallback)
+  if (notion.queryDatabase) {
+    return notion.queryDatabase({
+      database_id: databaseId,
+    });
+  }
+
+  throw new Error("Unsupported Notion SDK version");
 }
 
-// --------------------------------
-// Reset daily quests
-// --------------------------------
+// -----------------------------
+// Fetch daily quests
+// -----------------------------
+async function fetchDailyQuests() {
+  const response = await queryDatabase(DAILY_QUESTS_DB);
+  return response.results ?? [];
+}
+
+// -----------------------------
+// Reset logic
+// -----------------------------
 async function resetDailyQuests() {
   console.log("🔄 Resetting daily quests...");
 
   const quests = await fetchDailyQuests();
-  const today = new Date().toISOString().split("T")[0];
+
+  if (!quests.length) {
+    console.log("⚠️ No daily quests found.");
+    return;
+  }
 
   for (const quest of quests) {
     await notion.pages.update({
       page_id: quest.id,
       properties: {
-        Status: { status: { name: "To Do" } },
-        Date: { date: { start: today } }
-      }
+        Status: {
+          status: { name: "Not Started" },
+        },
+      },
     });
   }
 
-  console.log(`✅ Reset ${quests.length} daily quests`);
+  console.log(`✅ Reset ${quests.length} daily quest(s).`);
 }
 
-// --------------------------------
-// Run
-// --------------------------------
-resetDailyQuests().catch(err => {
-  console.error("❌ Daily reset failed:", err.body ?? err);
-  process.exit(1);
+// -----------------------------
+// Run immediately
+// -----------------------------
+resetDailyQuests().catch((err) => {
+  console.error("❌ Daily reset failed:", err?.body ?? err);
 });
