@@ -1,15 +1,13 @@
 name: Daily Quest Reset
 
 on:
-  # Runs every day at 5:00 AM UTC
   schedule:
+    # Runs every day at 05:00 UTC (adjust later if needed)
     - cron: "0 5 * * *"
-
-  # Allows manual runs (VERY IMPORTANT)
   workflow_dispatch:
 
 jobs:
-  reset-daily-quests:
+  reset:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,10 +20,10 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run daily quest reset
+        run: node systems/resetDailyQuests.js
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           DAILY_QUESTS_DB: ${{ secrets.DAILY_QUESTS_DB }}
-        run: node systems/resetDailyQuests.js
