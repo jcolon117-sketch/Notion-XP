@@ -16,8 +16,14 @@ async function resetDailyQuests() {
   })
 
   console.log(`✅ Found ${response.results.length} quests`)
+
+  // 👇 ADD THIS BLOCK RIGHT HERE
+  response.results.forEach((page, i) => {
+    const title =
+      page.properties?.Name?.title?.[0]?.plain_text ?? '(no title)'
+    console.log(`${i + 1}. ${title}`)
+  })
+  // 👆 END ADDITION
 }
 
-resetDailyQuests().catch((err) => {
-  console.error('❌ Daily reset failed:', err)
-})
+resetDailyQuests().catch(console.error)
