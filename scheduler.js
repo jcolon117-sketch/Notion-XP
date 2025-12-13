@@ -5,13 +5,13 @@ import { runQuestBatch } from "./systems/questBatchProcessor.js";
 
 console.log("🕒 Quest scheduler started");
 
-// Run every 5 minutes
+// Every 5 minutes
 cron.schedule("*/5 * * * *", async () => {
   console.log("⚙️ Running quest batch...");
   try {
     await runQuestBatch();
     console.log("✅ Quest batch finished");
   } catch (err) {
-    console.error("❌ Quest batch error:", err?.body ?? err);
+    console.error("❌ Quest batch error:", err);
   }
 });

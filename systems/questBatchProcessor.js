@@ -3,12 +3,16 @@ import "dotenv/config";
 import { Client } from "@notionhq/client";
 import { processQuest } from "./processQuest.js";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
+
 const QUESTS_DB = process.env.QUESTS_DB;
 
-// --------------------------------
-// Fetch completed quests
-// --------------------------------
+if (!QUESTS_DB) {
+  throw new Error("❌ QUESTS_DB environment variable not set");
+}
+
 async function fetchCompletedQuests() {
   const response = await notion.databases.query({
     database_id: QUESTS_DB,
@@ -21,9 +25,6 @@ async function fetchCompletedQuests() {
   return response.results;
 }
 
-// --------------------------------
-// EXPORT (THIS IS THE KEY FIX)
-// --------------------------------
 export async function runQuestBatch() {
   console.log("🔄 Running Quest Batch Processor...");
 

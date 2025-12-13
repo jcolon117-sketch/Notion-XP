@@ -1,73 +1,64 @@
-// index.js
+// index.js (PROJECT ROOT)
 import "dotenv/config";
-import { Client } from "@notionhq/client";
 import chalk from "chalk";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-
-const QUESTS_DB = process.env.QUESTS_DB;
-const USERS_DB = process.env.USERS_DB;
+import { runQuestBatch } from "./systems/questBatchProcessor.js";
 
 // ---------------------------------------------
-// Fetch quests where Status = "Completed"
+// CONFIG
 // ---------------------------------------------
-async function fetchCompletedQuests() {
-  console.log(chalk.cyan("🔍 Fetching quests..."));
+const MODE = process.env.MODE || "manual"; 
+// manual → run once and exit
+// daemon → loop every X minutes
 
-  const response = await notion.databases.query({
-    database_id: QUESTS_DB,
-    filter: {
-      property: "Status",
-      status: { equals: "Completed" },
-    },
-  });
+const INTERVAL_MINUTES = Number(process.env.QUEST_SCAN_INTERVAL ?? 5);
 
-  return response.results;
+// ---------------------------------------------
+// MAIN RUNNER
+// ---------------------------------------------
+async function runOnce() {
+  console.log(chalk.cyan("\n🚀 Notion RPG Engine Starting...\n"));
+
+  await runQuestBatch();
+
+  console.log(chalk.green("\n✅ Quest batch complete.\n"));
 }
 
 // ---------------------------------------------
-// Process each completed quest
+// DAEMON MODE (optional)
 // ---------------------------------------------
-async function processQuest(quest) {
-  const props = quest.properties;
-
-  const name = props["Name"]?.title?.[0]?.plain_text || "Unnamed Quest";
-  const gold = props["Gold Reward"]?.number ?? 0;
-  const stat = props["Stat Reward"]?.select?.name ?? null;
-  const statAmount = props["Stat Amount"]?.number ?? 0;
-
+async function runDaemon() {
   console.log(
-    chalk.green(
-      `➡️ Processing quest: ${name} (${gold} gold, ${stat} +${statAmount})`
+    chalk.magenta(
+      `🕒 Running in DAEMON mode — scanning every ${INTERVAL_MINUTES} minutes`
     )
   );
 
-  // TODO — Add your character update logic here.
+  while (true) {
+    try {
+      await runOnce();
+    } catch (err) {
+      console.error(chalk.red("❌ Fatal error in batch loop"), err);
+    }
 
-  await notion.pages.update({
-    page_id: quest.id,
-    properties: {
-      Status: { status: { name: "To Do" } },
-    },
-  });
-
-  console.log(chalk.gray("   ✔ Quest reset to To Do"));
+    await new Promise((res) =>
+      setTimeout(res, INTERVAL_MINUTES * 60 * 1000)
+    );
+  }
 }
 
 // ---------------------------------------------
-// MAIN
+// BOOTSTRAP
 // ---------------------------------------------
 (async () => {
   try {
-    const completed = await fetchCompletedQuests();
-    console.log(chalk.magenta(`📌 Found ${completed.length} completed quests.`));
-
-    for (const quest of completed) {
-      await processQuest(quest);
+    if (MODE === "daemon") {
+      await runDaemon();
+    } else {
+      await runOnce();
     }
-
-    console.log(chalk.green("🎉 All completed quests processed!"));
   } catch (err) {
-    console.error(chalk.red("❌ Error running script:"), err.body ?? err);
+    console.error(chalk.red("🔥 Engine crashed:"), err);
+    process.exit(1);
   }
 })();

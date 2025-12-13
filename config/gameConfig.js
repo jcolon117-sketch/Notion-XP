@@ -28,4 +28,5 @@ export const LOG_TYPES = {
   ITEM: "Item",
   ENCOUNTER: "Encounter",
   ENERGY: "Energy",
+  SYSTEM: "System"
 };
