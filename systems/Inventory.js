@@ -1,23 +1,50 @@
-import { Client } from "@notionhq/client";
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+import 'dotenv/config'
+import { Client } from '@notionhq/client'
 
-const INVENTORY_DB = process.env.INVENTORY_DB;
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN
+})
 
-export async function addItemToInventory({
-  characterId,
-  itemId,
-  quantity = 1,
-  questId
-}) {
-  await notion.pages.create({
-    parent: { database_id: INVENTORY_DB },
-    properties: {
-      Character: { relation: [{ id: characterId }] },
-      Item: { relation: [{ id: itemId }] },
-      Quantity: { number: quantity },
-      Equipped: { checkbox: false },
-      "Acquired From": { relation: [{ id: questId }] },
-      Timestamp: { date: { start: new Date().toISOString() } }
-    }
-  });
+export default class Inventory {
+  async addItem({
+    characterId,
+    itemId,
+    quantity = 1,
+    source = 'Loot'
+  }) {
+    return notion.pages.create({
+      parent: { database_id: process.env.INV_DB },
+      properties: {
+        // ✅ MUST match Notion title property name EXACTLY
+        "Item Name": {
+          title: [
+            {
+              text: { content: 'Looted Item' }
+            }
+          ]
+        },
+
+        Owner: {
+          relation: [{ id: characterId }]
+        },
+
+        Item: {
+          relation: [{ id: itemId }]
+        },
+
+        Quantity: {
+          number: quantity
+        },
+
+        "Acquired From": {
+          select: { name: source }
+        },
+
+        "Acquired At": {
+          date: { start: new Date().toISOString() }
+        }
+      }
+    })
+  }
 }
+
