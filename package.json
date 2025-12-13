@@ -2,7 +2,7 @@
   "type": "module",
   "dependencies": {
     "@notionhq/client": "^5.4.0",
-    "node-cron": "^3.0.3",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "node-cron": "^3.0.3"
   }
 }
