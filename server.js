@@ -37,7 +37,6 @@ app.get("/api/character/:id/summary", async (req, res) => {
       currentXP: p["Current XP"]?.number ?? 0,
       xpProgress: p["XP Progress"]?.number ?? 0,
       nextLevelXP: p["Next Level XP"]?.formula?.number ?? null,
-      gold: p["Gold"]?.number ?? 0,
       energy: p["Current Energy"]?.number ?? 0,
       maxEnergy: p["Max Energy"]?.number ?? 100,
       stamina: p["Current Stamina"]?.number ?? 0,
@@ -51,38 +50,6 @@ app.get("/api/character/:id/summary", async (req, res) => {
       intelligence: p["Intelligence"]?.number ?? 0,
       wisdom: p["Wisdom"]?.number ?? 0
     };
-
-    // Inventory query (names resolved)
-    const invQuery = await notion.databases.query({
-      database_id: INV_DB,
-      filter: { property: "Character", relation: { contains: charId } },
-      page_size: 100
-    });
-
-    summary.inventoryCount = invQuery.results.length;
-    summary.inventory = [];
-
-    for (const e of invQuery.results) {
-      const itemRel = e.properties.Item?.relation?.[0];
-      const itemId = itemRel?.id;
-      let itemName = "Item";
-      let rarity = "Common";
-      if (itemId) {
-        try {
-          const itemPage = await notion.pages.retrieve({ page_id: itemId });
-          itemName = itemPage.properties.Name?.title?.[0]?.plain_text ?? "Item";
-          rarity = itemPage.properties.Rarity?.select?.name ?? "Common";
-        } catch {}
-      }
-      summary.inventory.push({
-        id: e.id,
-        itemId,
-        itemName,
-        rarity,
-        quantity: e.properties.Quantity?.number ?? 1,
-        equipped: e.properties.Equipped?.checkbox ?? false
-      });
-    }
 
     res.json({ ok: true, summary });
   } catch (err) {
