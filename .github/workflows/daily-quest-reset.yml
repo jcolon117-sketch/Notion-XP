@@ -2,7 +2,7 @@ name: Daily Quest Reset
 
 on:
   schedule:
-    # Runs every day at 05:00 UTC (adjust later if needed)
+    # Runs every day at 05:00 UTC
     - cron: "0 5 * * *"
   workflow_dispatch:
 
@@ -25,5 +25,5 @@ jobs:
       - name: Run daily quest reset
         run: node systems/resetDailyQuests.js
         env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          DAILY_QUESTS_DB: ${{ secrets.DAILY_QUESTS_DB }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_QUEST_DB_ID: ${{ secrets.NOTION_QUEST_DB_ID }}
