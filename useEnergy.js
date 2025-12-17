@@ -2,7 +2,7 @@
 import { Client } from "@notionhq/client";
 import "dotenv/config";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 export async function consumeEnergy(characterId, cost) {
   const page = await notion.pages.retrieve({ page_id: characterId });

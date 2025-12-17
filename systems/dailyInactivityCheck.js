@@ -5,13 +5,13 @@ import { Client } from "@notionhq/client";
 import { calculateInactivityPenalty } from "./inactivityPenalty.js";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+  auth: process.env.NOTION_API_KEY,
 });
 
-const CHAR_DB = process.env.CHAR_DB;
+const NOTION_USER_DB_ID = process.env.NOTION_USER_DB_ID;
 
-if (!CHAR_DB) {
-  throw new Error("❌ CHAR_DB environment variable not set");
+if (!NOTION_USER_DB_ID) {
+  throw new Error("❌ NOTION_USER_DB_ID environment variable not set");
 }
 
 function daysBetween(dateA, dateB) {
@@ -25,7 +25,7 @@ export async function applyInactivityPenalties() {
   const today = new Date();
 
   const characters = await notion.databases.query({
-    database_id: CHAR_DB,
+    database_id: NOTION_USER_DB_ID,
   });
 
   for (const char of characters.results) {

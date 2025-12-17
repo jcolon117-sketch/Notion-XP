@@ -3,7 +3,7 @@ import { Client } from '@notionhq/client'
 import { generateEncountersIfMissing } from './encounterGenerator.js'
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN
+  auth: process.env.NOTION_API_KEY
 })
 
 /**
@@ -43,7 +43,7 @@ async function runEncounter(characterPageId) {
   /* ──────────────────────────────────────────────── */
 
   let encounters = await notion.databases.query({
-    database_id: process.env.ENCOUNTERS_DB
+    database_id: process.env.NOTION_ENCOUNTERS_DB_ID
   })
 
   console.log(`📦 Total encounters: ${encounters.results.length}`)
@@ -68,7 +68,7 @@ async function runEncounter(characterPageId) {
     await generateEncountersIfMissing()
 
     encounters = await notion.databases.query({
-      database_id: process.env.ENCOUNTERS_DB
+      database_id: process.env.NOTION_ENCOUNTERS_DB_ID
     })
 
     validEncounters = encounters.results.filter(e => {

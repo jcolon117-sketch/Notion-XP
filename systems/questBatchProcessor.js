@@ -4,18 +4,18 @@ import { Client } from "@notionhq/client";
 import { processQuest } from "./processQuest.js";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+  auth: process.env.NOTION_API_KEY,
 });
 
-const QUESTS_DB = process.env.QUESTS_DB;
+const NOTION_QUESTS_DB_ID = process.env.NOTION_QUESTS_DB_ID;
 
-if (!QUESTS_DB) {
-  throw new Error("❌ QUESTS_DB environment variable not set");
+if (!NOTION_QUESTS_DB_ID) {
+  throw new Error("❌ NOTION_QUESTS_DB_ID environment variable not set");
 }
 
 async function fetchCompletedQuests() {
   const response = await notion.databases.query({
-    database_id: QUESTS_DB,
+    database_id: NOTION_QUESTS_DB_ID,
     filter: {
       property: "Status",
       status: { equals: "Completed" },

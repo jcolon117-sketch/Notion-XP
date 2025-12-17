@@ -3,13 +3,13 @@ import "dotenv/config";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+  auth: process.env.NOTION_API_KEY,
 });
 
-const DAILY_QUESTS_DB = process.env.DAILY_QUESTS_DB;
+const NOTION_DAILY_QUESTS_DB_ID = process.env.NOTION_DAILY_QUESTS_DB_ID;
 
-if (!DAILY_QUESTS_DB) {
-  throw new Error("❌ DAILY_QUESTS_DB environment variable not set");
+if (!NOTION_DAILY_QUESTS_DB_ID) {
+  throw new Error("❌ NOTION_DAILY_QUESTS_DB_ID environment variable not set");
 }
 
 // ---------------------------
@@ -62,7 +62,7 @@ export async function generateDailyQuests() {
   for (const quest of quests) {
     await notion.pages.create({
       parent: {
-        database_id: DAILY_QUESTS_DB,
+        database_id: NOTION_DAILY_QUESTS_DB_ID,
       },
       properties: {
         /* 🔑 TITLE PROPERTY — MUST MATCH NOTION EXACTLY */

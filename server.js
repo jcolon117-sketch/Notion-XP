@@ -9,15 +9,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-// Required envs: CHAR_DB, INV_DB, ITEMS_DB, QUESTS_DB, ENCOUNTERS_DB, ENCOUNTER_LOG_DB
-const CHAR_DB = process.env.CHAR_DB || "";
-const INV_DB = process.env.INV_DB || "";
-const ITEMS_DB = process.env.ITEMS_DB || "";
-const QUESTS_DB = process.env.QUESTS_DB || "";
-const ENCOUNTERS_DB = process.env.ENCOUNTERS_DB || "";
-const ENCOUNTER_LOG_DB = process.env.ENCOUNTER_LOG_DB || "";
+// Required envs: NOTION_USER_DB_ID, NOTION_QUESTS_DB_ID, NOTION_ENCOUNTERS_DB_ID, NOTION_ENCOUNTER_LOG_DB_ID
+const NOTION_USER_DB_ID = process.env.NOTION_USER_DB_ID || "";
+const NOTION_QUESTS_DB_ID = process.env.NOTION_QUESTS_DB_ID || "";
+const NOTION_ENCOUNTERS_DB_ID = process.env.NOTION_ENCOUNTERS_DB_ID || "";
+const NOTION_ENCOUNTER_LOG_DB_ID = process.env.NOTION_ENCOUNTER_LOG_DB_ID || "";
 
 async function getCharacterPage(characterId) {
   return notion.pages.retrieve({ page_id: characterId });
@@ -41,8 +39,6 @@ app.get("/api/character/:id/summary", async (req, res) => {
       maxEnergy: p["Max Energy"]?.number ?? 100,
       stamina: p["Current Stamina"]?.number ?? 0,
       maxStamina: p["Max Stamina"]?.number ?? 100,
-      carryWeight: p["Carry Weight"]?.number ?? 0,
-      maxWeight: p["Max Weight"]?.number ?? 100,
       strength: p["Strength"]?.number ?? 0,
       agility: p["Agility"]?.number ?? 0,
       dexterity: p["Dexterity"]?.number ?? 0,

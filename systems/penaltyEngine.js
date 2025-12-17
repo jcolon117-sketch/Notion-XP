@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-const notion = new Client;({ auth: process.env.NOTION_TOKEN });
+const notion = new Client;({ auth: process.env.NOTION_API_KEY });
 
 export async function applyPenalty({
     characterId,
@@ -25,7 +25,7 @@ export async function applyPenalty({
     const duration = durationMap[type] ?? 1;
 
     await notion.pages.create({
-        parent: { database_id: process.env.PENALTIES_DB },
+        parent: { database_id: process.env.NOTION_PENALTIES_DB_ID },
         properties: {
             Name: {title: [{ text: { content: `${type} Penalty` } }] },
             Type: { select: { name: type } },

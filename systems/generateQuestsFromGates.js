@@ -3,14 +3,13 @@ import "dotenv/config";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+  auth: process.env.NOTION_API_KEY,
 });
 
-const GATES_DB = process.env.GATES_DB;
-const QUESTS_DB = process.env.QUESTS_DB;
-
-if (!GATES_DB || !QUESTS_DB) {
-  throw new Error("❌ Missing GATES_DB or QUESTS_DB environment variables");
+const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
+const NOTION_QUESTS_DB_ID = process.env.NOTION_QUESTS_DB_ID;
+if (!NOTION_GATES_DB_ID || !NOTION_QUESTS_DB_ID) {
+  throw new Error("❌ Missing NOTION_GATES_DB_ID or NOTION_QUESTS_DB_ID environment variables");
 }
 
 // ---------------------------
@@ -18,7 +17,7 @@ if (!GATES_DB || !QUESTS_DB) {
 // ---------------------------
 async function fetchActiveGates() {
   const res = await notion.databases.query({
-    database_id: GATES_DB,
+    database_id: NOTION_GATES_DB_ID,
     filter: {
       property: "Active",
       checkbox: { equals: true },
@@ -58,7 +57,7 @@ function buildMilestoneQuest(rank) {
       metrics: "Train Muay Thai for 120 minutes",
     },
     A: {
-      title: "Warrior–Developer Balance",
+      title: "Warrior Developer Balance",
       difficulty: "Elite",
       xp: 1200,
       metrics: "Complete workouts AND 10 hours of game dev",
@@ -96,7 +95,7 @@ export async function generateQuestsFromGates() {
 
     await notion.pages.create({
       parent: {
-        database_id: QUESTS_DB,
+        database_id: NOTION_QUESTS_DB_ID,
       },
       properties: {
         Title: {

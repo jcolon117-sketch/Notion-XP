@@ -5,10 +5,10 @@ import { applyXP } from "./leveling.js";
 import { logEvent } from "./logger.js";
 import { LOG_TYPES } from "../config/gameConfig.js";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-const DAILY_QUESTS_DB = process.env.DAILY_QUESTS_DB;
-const GATES_DB = process.env.GATES_DB;
+const NOTION_DAILY_QUESTS_DB_ID = process.env.NOTION_DAILY_QUESTS_DB_ID;
+const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
 
 // ------------------------
 // Helpers
@@ -19,7 +19,7 @@ function sum(values) {
 
 async function getDailyQuests(userId, start, end) {
   const res = await notion.databases.query({
-    database_id: DAILY_QUESTS_DB,
+    database_id: NOTION_DAILY_QUESTS_DB_ID,
     filter: {
       and: [
         {
@@ -136,7 +136,7 @@ export async function runGateValidation() {
   console.log("🚪 Validating Gates...");
 
   const res = await notion.databases.query({
-    database_id: GATES_DB,
+    database_id: NOTION_GATES_DB_ID,
     filter: {
       property: "Active",
       checkbox: { equals: true }

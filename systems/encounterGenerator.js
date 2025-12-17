@@ -2,7 +2,7 @@ import 'dotenv/config'
 import { Client } from '@notionhq/client'
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN
+  auth: process.env.NOTION_API_KEY
 })
 
 /**
@@ -11,7 +11,7 @@ const notion = new Client({
  */
 export async function generateEncountersIfMissing() {
   const existing = await notion.databases.query({
-    database_id: process.env.ENCOUNTERS_DB
+    database_id: process.env.NOTION_ENCOUNTERS_DB_ID
   })
 
   if (existing.results.length > 0) {
@@ -44,7 +44,7 @@ export async function generateEncountersIfMissing() {
   for (const e of encounters) {
     await notion.pages.create({
       parent: {
-        database_id: process.env.ENCOUNTERS_DB
+        database_id: process.env.NOTION_ENCOUNTERS_DB_ID
       },
       properties: {
         /* ───────── REQUIRED PROPERTIES ───────── */

@@ -13,7 +13,7 @@ import { increaseFatigue, calculateFatigueModifier } from "./fatigueEngine.js";
 import { getWeekIndex } from "./weekUtils.js";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+  auth: process.env.NOTION_API_KEY,
 });
 
 // ------------------------

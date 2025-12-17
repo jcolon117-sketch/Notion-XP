@@ -7,11 +7,11 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const GATES_DB = process.env.GATES_DB;
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
 
-if (!GATES_DB) {
-  throw new Error("❌ GATES_DB environment variable not set");
+if (!NOTION_GATES_DB_ID) {
+  throw new Error("❌ NOTION_GATES_DB_ID environment variable not set");
 }
 
 // --------------------------------------------------
@@ -110,7 +110,7 @@ const GATE_TEMPLATES = [
 // --------------------------------------------------
 async function gateExists(rank) {
   const res = await notion.databases.query({
-    database_id: GATES_DB,
+    database_id: NOTION_GATES_DB_ID,
     filter: {
       property: "Rank",
       select: { equals: rank },
@@ -137,7 +137,7 @@ export async function generateGates() {
     console.log(`🧱 Creating Gate ${gate.rank}...`);
 
     await notion.pages.create({
-      parent: { database_id: GATES_DB },
+      parent: { database_id: NOTION_GATES_DB_ID },
       properties: {
         // Title
         title: {

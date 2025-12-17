@@ -1,18 +1,17 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-const GATES_DB = process.env.GATES_DB;
-const DAILY_QUESTS_DB = process.env.DAILY_QUESTS_DB;
-const QUESTS_DB = process.env.QUESTS_DB;
-
+const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
+const NOTION_DAILY_QUESTS_DB_ID = process.env.NOTION_DAILY_QUESTS_DB_ID;
+const NOTION_QUESTS_DB_ID = process.env.NOTION_QUESTS_DB_ID; 
 /* ---------------------------- */
 /* Fetch active gate             */
 /* ---------------------------- */
 async function getActiveGate() {
   const res = await notion.databases.query({
-    database_id: GATES_DB,
+    database_id: NOTION_GATES_DB_ID,
     filter: {
       property: "Active",
       checkbox: { equals: true }
@@ -27,7 +26,7 @@ async function getActiveGate() {
 /* ---------------------------- */
 async function aggregateDailyProgress() {
   const res = await notion.databases.query({
-    database_id: DAILY_QUESTS_DB,
+    database_id: NOTION_DAILY_QUESTS_DB_ID,
     filter: {
       property: "Status",
       status: { equals: "Completed" }
@@ -113,7 +112,7 @@ export async function runProgressionEngine() {
     // Unlock next gate
     if (nextRank) {
       const nextGate = await notion.databases.query({
-        database_id: GATES_DB,
+        database_id: NOTION_GATES_DB_ID,
         filter: {
           property: "Rank",
           select: { equals: nextRank }

@@ -3,10 +3,10 @@ import "dotenv/config";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN
+  auth: process.env.NOTION_API_KEY,
 });
 
-const LOGS_DB = process.env.LOGS_DB;
+const LOGS_DB = process.env.NOTION_LOGS_DB_ID;
 
 export async function logEvent({
   name,
@@ -22,7 +22,7 @@ export async function logEvent({
 
   await notion.pages.create({
     parent: {
-      database_id: LOGS_DB
+      database_id: NOTION_LOGS_DB_ID
     },
     properties: {
       Name: {

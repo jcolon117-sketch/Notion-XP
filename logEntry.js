@@ -1,7 +1,7 @@
 // logEntry.js
 import { notion } from "./notionClient.js";
 import "dotenv/config";
-const LOG_DB = process.env.LOG_DB;
+const NOTION_LOG_DB_ID = process.env.NOTION_LOG_DB_ID;
 
 /**
  * Create a log entry in LOG_DB
@@ -9,13 +9,13 @@ const LOG_DB = process.env.LOG_DB;
  * userPageId, questPageId optional
  */
 export async function createLog({ type, userPageId, questPageId, details }) {
-  if (!LOG_DB) {
+  if (!NOTION_LOG_DB_ID) {
     console.warn("LOG_DB not set — skipping log entry.");
     return;
   }
 
   await notion.pages.create({
-    parent: { database_id: LOG_DB },
+    parent: { database_id: NOTION_LOG_DB_ID },
     properties: {
       Entry: {
         title: [{ text: { content: `${type} — ${new Date().toLocaleString()}` } }]

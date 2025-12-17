@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-export const notion = new Client({ auth: process.env.NOTION_TOKEN });
+export const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 // utility to safely get a property by a list of candidate names
 export function getProp(props, candidates = []) {

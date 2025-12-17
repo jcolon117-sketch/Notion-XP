@@ -2,15 +2,15 @@
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-const DAILY_DB = process.env.DAILY_QUESTS_DB;
-const GATES_DB = process.env.GATES_DB;
+const NOTION_DAILY_QUESTS_DB_ID = process.env.NOTION_DAILY_QUESTS_DB_ID;
+const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
 
 // Fetch completed Daily Quests that haven't been processed
 async function fetchCompletedDailyQuests() {
   const res = await notion.databases.query({
-    database_id: DAILY_DB,
+    database_id: NOTION_DAILY_QUESTS_DB_ID,
     filter: {
       and: [
         { property: "Status", status: { equals: "Completed" } },
