@@ -25,7 +25,6 @@ export const LOG_TYPES = {
   DAILY: "Daily Quest",
   LEVEL_UP: "Level Up",
   STAT_UP: "Stat Up",
-  ITEM: "Item",
   ENCOUNTER: "Encounter",
   ENERGY: "Energy",
   SYSTEM: "System"

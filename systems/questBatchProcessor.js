@@ -43,3 +43,12 @@ export async function runQuestBatch() {
 
   console.log("🎉 Quest batch processing complete.");
 }
+
+/* ─────────────────────────────── */
+/* CLI ENTRY                        */
+/* ─────────────────────────────── */
+
+runQuestBatch().catch(err => {
+  console.error("❌ Quest batch processor failed");
+  console.error(err);
+});

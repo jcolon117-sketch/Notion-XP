@@ -7,7 +7,7 @@ const notion = new Client({
 })
 
 /**
- * Run an encounter for a character
+ * Run a real-life encounter for a character
  * Usage:
  * node systems/encounterEngine.js <CHARACTER_PAGE_ID>
  */
@@ -53,10 +53,9 @@ async function runEncounter(characterPageId) {
   /* ──────────────────────────────────────────────── */
 
   let validEncounters = encounters.results.filter(e => {
-    const active = e.properties.Active?.checkbox
+    const active = e.properties.Active?.checkbox === true
     const min = e.properties['Min Level']?.number ?? 1
     const max = e.properties['Max Level']?.number ?? 999
-
     return active && level >= min && level <= max
   })
 
@@ -65,14 +64,15 @@ async function runEncounter(characterPageId) {
   /* ──────────────────────────────────────────────── */
 
   if (validEncounters.length === 0) {
-    console.log('⚠️ No valid encounters — generating...')
+    console.log('⚠️ No valid encounters — generating real-life encounters...')
     await generateEncountersIfMissing()
+
     encounters = await notion.databases.query({
       database_id: process.env.ENCOUNTERS_DB
     })
 
     validEncounters = encounters.results.filter(e => {
-      const active = e.properties.Active?.checkbox
+      const active = e.properties.Active?.checkbox === true
       const min = e.properties['Min Level']?.number ?? 1
       const max = e.properties['Max Level']?.number ?? 999
       return active && level >= min && level <= max
@@ -80,7 +80,7 @@ async function runEncounter(characterPageId) {
   }
 
   if (validEncounters.length === 0) {
-    console.log('❌ Still no encounters available')
+    console.log('❌ Still no encounters available after generation')
     return
   }
 
@@ -89,6 +89,7 @@ async function runEncounter(characterPageId) {
   /* ──────────────────────────────────────────────── */
 
   const weightedPool = []
+
   for (const e of validEncounters) {
     const weight = e.properties.Weight?.number ?? 1
     for (let i = 0; i < weight; i++) {
@@ -101,7 +102,7 @@ async function runEncounter(characterPageId) {
 
   const name =
     encounter.properties.Name?.title?.[0]?.text?.content ??
-    'Unknown'
+    'Unknown encounter'
 
   const xpReward =
     encounter.properties['XP Reward']?.number ?? 0
@@ -116,7 +117,7 @@ async function runEncounter(characterPageId) {
   /* APPLY ENERGY COST (SAFE)                         */
   /* ──────────────────────────────────────────────── */
 
-  if (energyCost > 0) {
+  if (energyCost > 0 && currentEnergy > 0) {
     await notion.pages.update({
       page_id: characterPageId,
       properties: {
@@ -128,7 +129,7 @@ async function runEncounter(characterPageId) {
   }
 
   /* ──────────────────────────────────────────────── */
-  /* APPLY XP (CORRECT PROPERTY)                      */
+  /* APPLY XP (CORRECT CHARACTER PROPERTY)            */
   /* ──────────────────────────────────────────────── */
 
   if (xpReward > 0) {
@@ -148,6 +149,7 @@ async function runEncounter(characterPageId) {
 /* ──────────────────────────────────────────────── */
 
 const characterId = process.argv[2]
+
 runEncounter(characterId).catch(err => {
   console.error('❌ Encounter failed')
   console.error(err)

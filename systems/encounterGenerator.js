@@ -6,7 +6,8 @@ const notion = new Client({
 })
 
 /**
- * Generates real-life encounters if the database is empty
+ * Auto-generate real-life encounters if none exist
+ * Called by encounterEngine.js
  */
 export async function generateEncountersIfMissing() {
   const existing = await notion.databases.query({
@@ -22,15 +23,21 @@ export async function generateEncountersIfMissing() {
   const encounters = [
     {
       name: 'You unexpectedly talk to someone new today.',
-      xp: 10
+      description: 'A spontaneous social interaction in real life.',
+      xp: 10,
+      type: 'Social'
     },
     {
       name: 'You complete a small task you were avoiding.',
-      xp: 8
+      description: 'You push past resistance and get something done.',
+      xp: 8,
+      type: 'Discovery'
     },
     {
       name: 'You go outside for a short walk.',
-      xp: 6
+      description: 'A simple physical activity that clears your mind.',
+      xp: 6,
+      type: 'Environment'
     }
   ]
 
@@ -40,9 +47,18 @@ export async function generateEncountersIfMissing() {
         database_id: process.env.ENCOUNTERS_DB
       },
       properties: {
-        /* REQUIRED TITLE PROPERTY */
+        /* ───────── REQUIRED PROPERTIES ───────── */
+
         Name: {
           title: [{ text: { content: e.name } }]
+        },
+
+        Type: {
+          select: { name: e.type }
+        },
+
+        Description: {
+          rich_text: [{ text: { content: e.description } }]
         },
 
         Active: {
@@ -61,6 +77,8 @@ export async function generateEncountersIfMissing() {
           number: 1
         },
 
+        /* ───────── REWARDS (XP ONLY) ───────── */
+
         'XP Reward': {
           number: e.xp
         },
@@ -68,6 +86,11 @@ export async function generateEncountersIfMissing() {
         'Energy Cost': {
           number: 0
         }
+
+        /* ❌ NO ITEMS
+           ❌ NO LOOT
+           ❌ NO GOLD
+           ❌ NO RELATIONS */
       }
     })
   }

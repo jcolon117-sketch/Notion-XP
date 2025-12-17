@@ -1,28 +1,22 @@
 // systems/leveling.js
-import { LEVEL_XP } from "../config/gameConfig.js";
-
-export function xpForLevel(level) {
-  return Math.floor(LEVEL_XP.base * Math.pow(level, LEVEL_XP.growth));
-}
-
-export function applyXP(character, gainedXP) {
-  let level = character.level;
-  let xp = character.xp + gainedXP;
-  let nextXP = xpForLevel(level);
+export function applyXP(character, xpGained) {
+  let { level, xp } = character;
+  xp += xpGained;
 
   let leveledUp = false;
 
-  while (xp >= nextXP) {
-    xp -= nextXP;
+  const xpToNext = (lvl) => lvl * 100;
+
+  while (xp >= xpToNext(level)) {
+    xp -= xpToNext(level);
     level++;
-    nextXP = xpForLevel(level);
     leveledUp = true;
   }
 
   return {
     level,
     xp,
-    nextXP,
-    leveledUp
+    leveledUp,
+    statPointsGained: leveledUp ? 2 : 0
   };
 }

@@ -1,85 +1,113 @@
+// systems/generateDailyQuests.js
 import "dotenv/config";
 import { Client } from "@notionhq/client";
-import chalk from "chalk";
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
 
-const DAILY_DB = process.env.DAILY_QUESTS_DB;   // Daily Quests DB ID
-const LOG_DB = process.env.LOG_DB;              // Log DB ID
+const DAILY_QUESTS_DB = process.env.DAILY_QUESTS_DB;
 
-// -------------------------------
-// Fetch templates inside database
-// -------------------------------
-async function getTemplates() {
-  const res = await notion.databases.retrieve({
-    database_id: DAILY_DB,
-  });
-
-  return res.template_pages || [];
+if (!DAILY_QUESTS_DB) {
+  throw new Error("❌ DAILY_QUESTS_DB environment variable not set");
 }
 
-// -------------------------------
-// Duplicate template into a real quest
-// -------------------------------
-async function createQuestFromTemplate(template) {
-  const today = new Date().toISOString().split("T")[0];
+// ---------------------------
+// Daily Quest Templates
+// ---------------------------
+const workoutRotation = [
+  "Push",
+  "Pull",
+  "Legs",
+  "Calisthenics",
+  "Muay Thai",
+];
 
-  return await notion.pages.create({
-    parent: { database_id: DAILY_DB },
-    properties: {
-      Name: template.properties.Name,
-      Status: {
-        status: { name: "To Do" }
-      },
-      Date: {
-        date: { start: today }
-      }
-    },
-    icon: template.icon,
-    cover: template.cover
-  });
-}
+const gameDevTasks = [
+  "Implement third-person camera movement",
+  "Refactor player movement controller",
+  "Prototype enemy AI behavior",
+  "Implement shooting mechanics",
+  "Fix animation blending issues",
+];
 
-// -------------------------------
-// Log creation in Log DB
-// -------------------------------
-async function logEntry(text) {
-  if (!LOG_DB) return;
-
-  await notion.pages.create({
-    parent: { database_id: LOG_DB },
-    properties: {
-      Name: {
-        title: [{ text: { content: text } }]
-      },
-      Time: {
-        date: { start: new Date().toISOString() }
-      }
-    }
-  });
-}
-
-// -------------------------------
-// MAIN FUNCTION
-// -------------------------------
+// ---------------------------
+// Generator
+// ---------------------------
 export async function generateDailyQuests() {
-  console.log(chalk.cyan("🌅 Generating daily quests…"));
+  console.log("📅 Running Daily Quest Generator...");
+  console.log("📘 Generating Daily Quests...");
 
-  const templates = await getTemplates();
+  const today = new Date().toISOString().split("T")[0];
+  const dayIndex = new Date().getDay();
 
-  if (!templates.length) {
-    console.log(chalk.red("❌ No templates found!"));
-    return;
+  const workoutType = workoutRotation[dayIndex % workoutRotation.length];
+  const gameDevTask = gameDevTasks[dayIndex % gameDevTasks.length];
+
+  const quests = [
+    {
+      title: `Workout — ${workoutType}`,
+      xp: 20,
+      energy: 15,
+      notes: `Complete today's ${workoutType} training session.`,
+    },
+    {
+      title: `Game Dev — ${gameDevTask}`,
+      xp: 25,
+      energy: 10,
+      notes: `Progress third-person shooter development task.`,
+    },
+  ];
+
+  for (const quest of quests) {
+    await notion.pages.create({
+      parent: {
+        database_id: DAILY_QUESTS_DB,
+      },
+      properties: {
+        /* 🔑 TITLE PROPERTY — MUST MATCH NOTION EXACTLY */
+        Title: {
+          title: [
+            {
+              text: { content: quest.title },
+            },
+          ],
+        },
+
+        Status: {
+          status: { name: "Not Started" },
+        },
+
+        "XP Reward": {
+          number: quest.xp,
+        },
+
+        "Energy Cost": {
+          number: quest.energy,
+        },
+
+        Date: {
+          date: { start: today },
+        },
+
+        Notes: {
+          rich_text: [
+            {
+              text: { content: quest.notes },
+            },
+          ],
+        },
+      },
+    });
   }
 
-  console.log(chalk.green(`📄 Found ${templates.length} templates.`));
+  console.log("✅ Daily quests generated successfully");
+}
 
-  for (const template of templates) {
-    const newQuest = await createQuestFromTemplate(template);
-    console.log(chalk.yellow(`✨ Created: ${newQuest.properties.Name.title[0].plain_text}`));
-
-    await logEntry(`Created daily quest: ${newQuest.properties.Name.title[0].plain_text}`);
-  }
-
-  console.log(chalk.green("🎉 Daily quests generated successfully."));
+// Allow direct CLI execution
+if (process.argv[1].includes("generateDailyQuests.js")) {
+  generateDailyQuests().catch((err) => {
+    console.error("❌ Daily quest generation failed");
+    console.error(err);
+  });
 }
