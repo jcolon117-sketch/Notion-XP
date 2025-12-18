@@ -21,9 +21,9 @@ async function getCharacterPage(characterId) {
   return notion.pages.retrieve({ page_id: characterId });
 }
 
-app.get("/api/health", (req, res) => res.json({ ok: true, now: new Date().toISOString() }));
+app.get("/health", (req, res) => res.json({ ok: true, now: new Date().toISOString() }));
 
-app.get("/api/character/:id/summary", async (req, res) => {
+app.get("/character/:id/summary", async (req, res) => {
   try {
     const charId = req.params.id;
     const page = await getCharacterPage(charId);
