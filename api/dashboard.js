@@ -1,11 +1,11 @@
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN
+  auth: process.env.NOTION_API_KEY,
 });
 
 export default async function handler(req, res) {
-  const pageId = process.env.CHARACTER_PAGE_ID;
+  const pageId = process.env.NOTION_USER_DB_ID;
 
   const page = await notion.pages.retrieve({ page_id: pageId });
   const p = page.properties;
