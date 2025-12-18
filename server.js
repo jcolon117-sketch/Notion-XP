@@ -1,57 +1,94 @@
 // server.js
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import "dotenv/config";
 import { Client } from "@notionhq/client";
 
+/* ───────────────────────────── */
+/* Setup                          */
+/* ───────────────────────────── */
+
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
 
-// Required envs: NOTION_USER_DB_ID, NOTION_QUESTS_DB_ID, NOTION_ENCOUNTERS_DB_ID, NOTION_ENCOUNTER_LOG_DB_ID
-const NOTION_USER_DB_ID = process.env.NOTION_USER_DB_ID || "";
-const NOTION_QUESTS_DB_ID = process.env.NOTION_QUESTS_DB_ID || "";
-const NOTION_ENCOUNTERS_DB_ID = process.env.NOTION_ENCOUNTERS_DB_ID || "";
-const NOTION_ENCOUNTER_LOG_DB_ID = process.env.NOTION_ENCOUNTER_LOG_DB_ID || "";
+const CHAR_DB = process.env.CHARACTER_DB;
 
-async function getCharacterPage(characterId) {
-  return notion.pages.retrieve({ page_id: characterId });
+/* ───────────────────────────── */
+/* Helpers                        */
+/* ───────────────────────────── */
+
+async function getCharacterPage(pageId) {
+  const page = await notion.pages.retrieve({ page_id: pageId });
+  const p = page.properties;
+
+  return {
+    level: p["Current Level"]?.number ?? 1,
+    currentXP: p["Current XP"]?.number ?? 0,
+    nextLevelXP: p["XP To Next Level"]?.number ?? 100,
+
+    energy: p["Current Energy"]?.number ?? 0,
+    maxEnergy: p["Max Energy"]?.number ?? 100,
+
+    stamina: p["Current Stamina"]?.number ?? 0,
+    maxStamina: p["Max Stamina"]?.number ?? 100,
+  };
 }
 
-app.get("/health", (req, res) => res.json({ ok: true, now: new Date().toISOString() }));
+/* ───────────────────────────── */
+/* Routes                         */
+/* ───────────────────────────── */
 
-app.get("/character/:id/summary", async (req, res) => {
+app.get("/", (req, res) => {
+  res.json({ status: "🟢 Notion RPG Server Online" });
+});
+
+/**
+ * LIVE DASHBOARD ENDPOINT
+ * Usage:
+ * https://your-app.vercel.app/character?char=PAGE_ID
+ */
+app.get("/character", async (req, res) => {
   try {
-    const charId = req.params.id;
-    const page = await getCharacterPage(charId);
-    const p = page.properties;
-    const summary = {
-      id: charId,
-      name: p.Name?.title?.[0]?.plain_text ?? "Unknown",
-      level: p["Current Level"]?.number ?? 1,
-      currentXP: p["Current XP"]?.number ?? 0,
-      xpProgress: p["XP Progress"]?.number ?? 0,
-      nextLevelXP: p["Next Level XP"]?.formula?.number ?? null,
-      energy: p["Current Energy"]?.number ?? 0,
-      maxEnergy: p["Max Energy"]?.number ?? 100,
-      stamina: p["Current Stamina"]?.number ?? 0,
-      maxStamina: p["Max Stamina"]?.number ?? 100,
-      strength: p["Strength"]?.number ?? 0,
-      agility: p["Agility"]?.number ?? 0,
-      dexterity: p["Dexterity"]?.number ?? 0,
-      constitution: p["Constitution"]?.number ?? 0,
-      intelligence: p["Intelligence"]?.number ?? 0,
-      wisdom: p["Wisdom"]?.number ?? 0
-    };
+    const { char } = req.query;
 
-    res.json({ ok: true, summary });
+    if (!char) {
+      return res.status(400).json({
+        error: "Missing ?char=PAGE_ID",
+      });
+    }
+
+    const data = await getCharacterPage(char);
+    res.json(data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ ok: false, error: String(err) });
+    res.status(500).json({
+      error: "Failed to load character",
+      details: err.message,
+    });
   }
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Server started"));
+/* ───────────────────────────── */
+/* Health Check                   */
+/* ───────────────────────────── */
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
+/* ───────────────────────────── */
+/* Start Server                   */
+/* ───────────────────────────── */
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+export default app;
