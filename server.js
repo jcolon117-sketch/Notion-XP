@@ -1,34 +1,43 @@
 import express from "express";
-import { Client } from "@notionhq/client";
-import { runGameTick } from "./systems/gameEngine.js";
-import { getPlayerStats } from "./systems/progressionEngine.js";
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const PORT = process.env.PORT || 3000;
 
-/**
- * Dashboard (READ ONLY)
- */
-app.get("/api/dashboard", async (req, res) => {
-  const charId = req.query.char;
-  if (!charId) return res.status(400).json({ error: "Missing char" });
-
-  const stats = await getPlayerStats(notion, charId);
-  res.json(stats);
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 Notion XP API server running on port ${PORT}`);
 });
 
-/**
- * Process quest (MAIN AUTOMATION ENTRY)
- */
-app.post("/api/completeQuest", async (req, res) => {
-  const { char, quest } = req.query;
+app.use(cors());
+app.use(express.json());
 
-  if (!char || !quest) {
-    return res.status(400).json({ error: "Missing char or quest" });
+// ---------- HEALTH CHECK ----------
+app.get("/", (req, res) => {
+  res.json({ status: "Notion XP API live" });
+});
+
+// ---------- DASHBOARD ----------
+app.get("/api/dashboard", async (req, res) => {
+  const { char } = req.query;
+
+  if (!char) {
+    return res.status(400).json({
+      error: "Missing char parameter (?char=NOTION_PAGE_ID)"
+    });
   }
 
-  const result = await runGameTick(notion, char, quest);
-  res.json({ success: true, result });
+  // TODO: fetch from Notion
+  res.json({
+    Level: 1,
+    XP: 0,
+    Energy: 0,
+    Stamina: 0
+  });
 });
 
+// ---------- EXPORT FOR VERCEL ----------
 export default app;
