@@ -1,3 +1,4 @@
+// api/sync.js
 import { syncProgress } from "../systems/syncProgress.js";
 
 export default async function handler(req, res) {
@@ -6,24 +7,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { charId } = req.body;
+    const { charId, generateDailies, allowEncounters } = req.body;
 
     if (!charId) {
       return res.status(400).json({ error: "Missing charId" });
     }
 
-    const result = await syncProgress(charId);
+    const result = await syncProgress(charId, {
+      generateDailies,
+      allowEncounters,
+    });
 
     return res.status(200).json({
       success: true,
-      result
+      result,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Sync failed:", err);
     return res.status(500).json({
       error: "Sync failed",
-      details: err.message
+      details: err.message,
     });
   }
 }

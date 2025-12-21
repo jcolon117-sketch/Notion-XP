@@ -1,108 +1,26 @@
 // systems/generateGates.js
-// FULL PATCH — Gates + Bosses
-// --------------------------------------------------
-// Creates progression Gates (E → S) with Boss metadata
-// Safe to re-run (skips existing gates by Name)
+// Character-bound Gates with progression support
 
 import "dotenv/config";
-import { Client } from "@notionhq/client";
+import { notion } from "../notionClient.js";
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-const NOTION_GATES_DB_ID = process.env.NOTION_GATES_DB_ID;
+const GATES_DB = process.env.NOTION_GATES_DB_ID;
+const PLAYER_ID = process.env.NOTION_PLAYER_ID;
 
-if (!NOTION_GATES_DB_ID) {
-  throw new Error("❌ NOTION_GATES_DB_ID environment variable not set");
+if (!GATES_DB || !PLAYER_ID) {
+  throw new Error("❌ Missing NOTION_GATES_DB_ID or NOTION_PLAYER_ID in .env");
 }
 
 // --------------------------------------------------
 // Gate Templates (ORDERED)
 // --------------------------------------------------
-// IMPORTANT: Property names MUST match Notion EXACTLY
-// Required properties in Gates DB:
-// - Name (title)
-// - Rank (select)
-// - Required XP (number)
-// - Required Stat (select)
-// - Energy Cost (number)
-// - Cooldown (number)
-// - Boss Name (rich_text)
-// - Boss Power (number)
-// - Boss Weakness (select)
-// - State (status)  -> LOCKED | UNLOCKING | CLEARED
-
 const GATE_TEMPLATES = [
-  {
-    rank: "E",
-    requiredXP: 0,
-    requiredStat: "None",
-    energyCost: 5,
-    cooldown: 0,
-    boss: {
-      name: "Training Drone",
-      power: 5,
-      weakness: "Persistence",
-    },
-  },
-  {
-    rank: "D",
-    requiredXP: 100,
-    requiredStat: "Strength",
-    energyCost: 10,
-    cooldown: 2,
-    boss: {
-      name: "Iron Sentinel",
-      power: 20,
-      weakness: "Technique",
-    },
-  },
-  {
-    rank: "C",
-    requiredXP: 300,
-    requiredStat: "Agility",
-    energyCost: 15,
-    cooldown: 4,
-    boss: {
-      name: "Shadow Stalker",
-      power: 45,
-      weakness: "Awareness",
-    },
-  },
-  {
-    rank: "B",
-    requiredXP: 700,
-    requiredStat: "Endurance",
-    energyCost: 20,
-    cooldown: 8,
-    boss: {
-      name: "Abyss Knight",
-      power: 80,
-      weakness: "Discipline",
-    },
-  },
-  {
-    rank: "A",
-    requiredXP: 1500,
-    requiredStat: "Willpower",
-    energyCost: 30,
-    cooldown: 16,
-    boss: {
-      name: "Dominion Warden",
-      power: 140,
-      weakness: "Focus",
-    },
-  },
-  {
-    rank: "S",
-    requiredXP: 3000,
-    requiredStat: "Mastery",
-    energyCost: 50,
-    cooldown: 24,
-    boss: {
-      name: "Eclipse Sovereign",
-      power: 250,
-      weakness: "Transcendence",
-    },
-  },
+  { rank: "E", xp: 100, energy: 5, boss: ["Training Drone", 5, "Persistence"] },
+  { rank: "D", xp: 250, energy: 10, boss: ["Iron Sentinel", 20, "Technique"] },
+  { rank: "C", xp: 500, energy: 15, boss: ["Shadow Stalker", 45, "Awareness"] },
+  { rank: "B", xp: 1000, energy: 20, boss: ["Abyss Knight", 80, "Discipline"] },
+  { rank: "A", xp: 2000, energy: 30, boss: ["Dominion Warden", 140, "Focus"] },
+  { rank: "S", xp: 4000, energy: 50, boss: ["Eclipse Sovereign", 250, "Transcendence"] },
 ];
 
 // --------------------------------------------------
@@ -110,10 +28,12 @@ const GATE_TEMPLATES = [
 // --------------------------------------------------
 async function gateExists(rank) {
   const res = await notion.databases.query({
-    database_id: NOTION_GATES_DB_ID,
+    database_id: GATES_DB,
     filter: {
-      property: "Rank",
-      select: { equals: rank },
+      and: [
+        { property: "Rank", select: { equals: rank } },
+        { property: "User", relation: { contains: PLAYER_ID } },
+      ],
     },
   });
   return res.results.length > 0;
@@ -123,69 +43,67 @@ async function gateExists(rank) {
 // Main Generator
 // --------------------------------------------------
 export async function generateGates() {
-  console.log("🚪 Checking Gates database...");
+  console.log("🚪 Generating Gates for Character...");
 
-  let createdAny = false;
+  for (let i = 0; i < GATE_TEMPLATES.length; i++) {
+    const gate = GATE_TEMPLATES[i];
 
-  for (const gate of GATE_TEMPLATES) {
-    const exists = await gateExists(gate.rank);
-    if (exists) {
-      console.log(`⏭️  Gate ${gate.rank} already exists — skipping`);
+    if (await gateExists(gate.rank)) {
+      console.log(`⏭ Gate ${gate.rank} already exists`);
       continue;
     }
 
-    console.log(`🧱 Creating Gate ${gate.rank}...`);
+    const isFirst = i === 0;
 
     await notion.pages.create({
-      parent: { database_id: NOTION_GATES_DB_ID },
+      parent: { database_id: GATES_DB },
       properties: {
-        // Title
-        title: {
+        // Title property in Gates DB is "Title"
+        Title: {
           title: [{ text: { content: `Gate ${gate.rank}` } }],
         },
 
-        // Rank
-        Rank: {
-          select: { name: gate.rank },
+        // Ownership (relation to Character DB)
+        User: {
+          relation: [{ id: PLAYER_ID }],
         },
 
-        // Requirements
-        "Required XP": { number: gate.requiredXP },
-        "Required Stat": { select: { name: gate.requiredStat } },
-        "Energy Cost": { number: gate.energyCost },
-        Cooldown: { number: gate.cooldown },
-
-        // Boss Metadata
-        "Boss Name": {
-          rich_text: [{ text: { content: gate.boss.name } }],
+        // Core progression
+        Rank: { select: { name: gate.rank } },
+        Tier: { select: { name: gate.rank } },
+        "Gate Type": {
+          select: { name: i === GATE_TEMPLATES.length - 1 ? "Boss" : "Normal" },
         },
-        "Boss Power": { number: gate.boss.power },
-        "Boss Weakness": { select: { name: gate.boss.weakness } },
+
+        // Rewards / requirements
+        "XP Reward": { number: gate.xp },
+        "Energy Cost": { number: gate.energy },
 
         // State
-        State: {
-          status: { name: "LOCKED" },
+        Active: { checkbox: isFirst }, // only E starts active
+        State: { status: { name: isFirst ? "Unlocking" : "Locked" } },
+
+        // Cycle
+        Cycle: { number: 1 },
+
+        // Boss metadata
+        "Boss Name": {
+          rich_text: [{ text: { content: gate.boss[0] } }],
         },
+        "Boss Power": { number: gate.boss[1] },
+        "Boss Weakness": { select: { name: gate.boss[2] } },
       },
     });
 
     console.log(`✅ Gate ${gate.rank} created`);
-    createdAny = true;
   }
 
-  if (!createdAny) {
-    console.log("✔️ All Gates already exist — nothing to generate");
-  } else {
-    console.log("🎉 All Gates generated successfully");
-  }
+  console.log("🎉 Gate generation complete");
 }
 
 // --------------------------------------------------
-// CLI Support
+// CLI (local)
 // --------------------------------------------------
-if (process.argv[1].includes("generateGates.js")) {
-  generateGates().catch((err) => {
-    console.error("❌ Gate generation failed");
-    console.error(err);
-  });
+if (process.argv[1] && process.argv[1].includes("generateGates.js")) {
+  generateGates().catch(console.error);
 }

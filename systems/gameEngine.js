@@ -1,31 +1,56 @@
-import { processQuest } from "./questEngine.js";
-import { updateProgression } from "./progressionEngine.js";
-import { updateEnergy } from "./energySystem.js";
-import { evaluateGates } from "./gateEngine.js";
-import { generateQuestsFromGates } from "./generateQuestsFromGates.js";
+// systems/gameEngine.js
+// CLEAN, FULLY PATCHED VERSION
 
-export async function runGameTick(notion, charId, questId = null) {
-  // 1. Process quest (if provided)
-  if (questId) {
-    await processQuest(notion, questId, charId);
+import { applyInactivityPenalties } from "./dailyInactivityCheck.js";
+import { runQuestBatch } from "./questBatchProcessor.js";
+import { evaluateGates } from "./evaluateGates.js";
+import { generateDailyQuests } from "./generateDailyQuests.js";
+import { rollEncounter } from "./encounterEngine.js";
+import { notion } from "../notionClient.js";
+
+/**
+ * Core RPG tick
+ * Triggered by:
+ * - Local engine (index.js)
+ * - Scheduler (future)
+ * - Manual testing
+ */
+export async function runGameTick(charId, options = {}) {
+  const {
+    generateDailies = false,
+    allowEncounters = true,
+  } = options;
+
+  console.log(`\n🎮 Running Game Tick for Character: ${charId}`);
+
+  // 1️⃣ Inactivity penalties (Notion formulas handle the math)
+  await applyInactivityPenalties();
+
+  // 2️⃣ Daily quests (only on daily reset)
+  if (generateDailies) {
+    await generateDailyQuests(charId);
   }
 
-  // 2. Update XP / Level
-  const progression = await updateProgression(notion, charId);
+  // 3️⃣ Process completed quests
+  await runQuestBatch();
 
-  // 3. Update Energy / Stamina
-  await updateEnergy(notion, charId);
+  // 4️⃣ Evaluate gates
+  const unlockedGates = await evaluateGates(charId);
 
-  // 4. Check gates
-  const unlockedGates = await evaluateGates(notion, charId);
-
-  // 5. Generate quests from gates
-  if (unlockedGates.length > 0) {
-    await generateQuestsFromGates(notion, unlockedGates, charId);
+  // 5️⃣ Encounters
+  let encounterResult = null;
+  if (allowEncounters) {
+    try {
+      encounterResult = await rollEncounter(charId);
+    } catch (err) {
+      console.warn("⚠️ Encounter engine error:", err.message);
+    }
   }
+
+  console.log("🎯 Game Tick Complete");
 
   return {
-    progression,
-    unlockedGates
+    unlockedGates,
+    encounterResult,
   };
 }

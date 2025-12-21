@@ -1,22 +1,26 @@
 // systems/leveling.js
-export function applyXP(character, xpGained) {
-  let { level, xp } = character;
-  xp += xpGained;
+// Simple leveling math helpers
 
-  let leveledUp = false;
+export function xpNeededForLevel(level) {
+  // Basic linear curve: can be swapped to match your Notion formula if desired
+  return level * 100;
+}
 
-  const xpToNext = (lvl) => lvl * 100;
+export function levelFromTotalXP(totalXP) {
+  let level = 0;
+  let remainingXP = totalXP;
 
-  while (xp >= xpToNext(level)) {
-    xp -= xpToNext(level);
+  // Convert a "total XP pool" into (level, remainingXP)
+  while (remainingXP >= xpNeededForLevel(level + 1)) {
+    remainingXP -= xpNeededForLevel(level + 1);
     level++;
-    leveledUp = true;
+
+    // Safety guard
+    if (level > 9999) break;
   }
 
   return {
     level,
-    xp,
-    leveledUp,
-    statPointsGained: leveledUp ? 2 : 0
+    remainingXP,
   };
 }

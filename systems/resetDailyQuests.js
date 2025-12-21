@@ -1,29 +1,75 @@
-import 'dotenv/config'
-import { Client } from '@notionhq/client'
+// systems/resetDailyQuests.js
 
-console.log('DEBUG NOTION_DAILY_QUESTS_DB_ID =', process.env.NOTION_DAILY_QUESTS_DB_ID)
-console.log('DEBUG NOTION_API_KEY =', process.env.NOTION_API_KEY?.slice(0, 10))
+import "dotenv/config";
+import { notion } from "../notionClient.js";
 
-const notion = new Client({
-  auth: process.env.NOTION_API_KEY,
-})
+const DAILY_DB = process.env.NOTION_DAILY_QUESTS_DB_ID;
 
-async function resetDailyQuests() {
-  console.log('🔄 Resetting daily quests...')
-
-  const response = await notion.databases.query({
-    database_id: process.env.NOTION_DAILY_QUESTS_DB_ID,
-  })
-
-  console.log(`✅ Found ${response.results.length} quests`)
-
-  // 👇 ADD THIS BLOCK RIGHT HERE
-  response.results.forEach((page, i) => {
-    const title =
-      page.properties?.Name?.title?.[0]?.plain_text ?? '(no title)'
-    console.log(`${i + 1}. ${title}`)
-  })
-  // 👆 END ADDITION
+if (!DAILY_DB) {
+  throw new Error("❌ NOTION_DAILY_QUESTS_DB_ID not set");
 }
 
-resetDailyQuests().catch(console.error)
+// ---------------------------
+// Helpers
+// ---------------------------
+function todayISO() {
+  return new Date().toISOString().split("T")[0];
+}
+
+// ---------------------------
+// Main Reset Logic
+// ---------------------------
+export async function resetDailyQuests() {
+  console.log("🔄 Resetting Daily Quests...");
+
+  const today = todayISO();
+
+  const response = await notion.databases.query({
+    database_id: DAILY_DB,
+    filter: {
+      property: "Date",
+      date: { equals: today },
+    },
+  });
+
+  console.log(`📘 Found ${response.results.length} daily quests for today`);
+
+  let resetCount = 0;
+
+  for (const page of response.results) {
+    const props = page.properties;
+    const status = props.Status?.status?.name;
+
+    // If already in base state (Available), skip
+    if (status === "Available") continue;
+
+    await notion.pages.update({
+      page_id: page.id,
+      properties: {
+        Status: { status: { name: "Available" } },
+        Completed: { checkbox: false },
+      },
+    });
+
+    resetCount++;
+
+    const title =
+      props.Title?.title?.[0]?.plain_text ??
+      props.Name?.title?.[0]?.plain_text ??
+      "(Untitled Quest)";
+
+    console.log(`♻️ Reset: ${title}`);
+  }
+
+  console.log(`✅ Daily Quest Reset Complete — ${resetCount} reset`);
+}
+
+// ---------------------------
+// CLI Support
+// ---------------------------
+if (process.argv[1] && process.argv[1].includes("resetDailyQuests.js")) {
+  resetDailyQuests().catch((err) => {
+    console.error("❌ Daily quest reset failed");
+    console.error(err);
+  });
+}

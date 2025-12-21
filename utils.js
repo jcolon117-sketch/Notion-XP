@@ -1,23 +1,26 @@
 // utils.js
+// XP curve utilities matching Character DB + questBatchProcessor
 
 export function xpNeededForLevel(level) {
-  return level * 100; // simple rule = 100 XP per level
+  if (level <= 1) return 100;
+  return Math.floor(100 * Math.pow(1.25, level - 1));
 }
 
 // Convert cumulative XP → Level + leftover XP
 export function levelFromTotalXP(totalXP) {
-  let level = 0;
+  let level = 1;
   let remaining = totalXP;
 
-  while (remaining >= xpNeededForLevel(level + 1)) {
-    remaining -= xpNeededForLevel(level + 1);
-    level++;
+  let next = xpNeededForLevel(level);
 
-    if (level > 9999) break; // infinite loop safety
+  while (remaining >= next) {
+    remaining -= next;
+    level++;
+    next = xpNeededForLevel(level);
   }
 
   return {
     level,
-    leftoverXP: remaining
+    leftoverXP: remaining,
   };
 }
