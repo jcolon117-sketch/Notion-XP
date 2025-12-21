@@ -22,6 +22,10 @@ export default async function handler(req, res) {
       result,
     });
   } catch (err) {
-    res.status(500).json({ error: "Sync failed", details: err.message });
+    console.error("❌ Sync failed:", err);
+    return res.status(500).json({
+      error: "Sync failed",
+      details: err.message,
+    });
   }
 }

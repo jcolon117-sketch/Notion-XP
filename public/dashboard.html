@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notion XP Sync Dashboard</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    input, button {
+      font-size: 1rem;
+      padding: 8px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎮 Notion XP Sync Dashboard</h2>
+
+  <label for="charId"><b>Character Page ID:</b></label>
+  <input type="text" id="charId" placeholder="Paste your Notion character page ID" />
+
+  <button onclick="runSync()">🔄 Run Sync</button>
+
+  <div id="result" style="margin-top: 20px;"></div>
+
+  <script>
+    async function runSync() {
+      const charId = document.getElementById("charId").value.trim();
+      const resultDiv = document.getElementById("result");
+
+      if (!charId) {
+        resultDiv.innerHTML = "<p style='color:red;'>Please enter a character ID.</p>";
+        return;
+      }
+
+      resultDiv.innerHTML = "<p>⏳ Syncing...</p>";
+
+      try {
+        const res = await fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ charId })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          resultDiv.innerHTML = `<p style='color:red;'>Sync failed: ${data.error}</p>`;
+          return;
+        }
+
+        const { unlockedGates, encounterResult } = data.result;
+
+        resultDiv.innerHTML = `
+          <h3>✅ Sync Complete</h3>
+          <p><b>Unlocked Gates:</b> ${unlockedGates.length}</p>
+          <p><b>Encounter:</b> ${encounterResult ? encounterResult.title + " (" + encounterResult.result + ")" : "None"}</p>
+          <pre>${JSON.stringify(data.result, null, 2)}</pre>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<p style='color:red;'>Error: ${err.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
