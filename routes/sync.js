@@ -1,4 +1,4 @@
-// api/sync.js
+// routes/sync.js
 import { syncProgress } from "../systems/syncProgress.js";
 
 export default async function handler(req, res) {
@@ -22,7 +22,6 @@ export default async function handler(req, res) {
       success: true,
       result,
     });
-
   } catch (err) {
     console.error("❌ Sync failed:", err);
     return res.status(500).json({

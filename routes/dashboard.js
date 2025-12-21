@@ -1,5 +1,4 @@
-// api/dashboard.js
-import "dotenv/config";
+// routes/dashboard.js
 import { notion } from "../notionClient.js";
 
 export default async function handler(req, res) {

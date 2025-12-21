@@ -1,5 +1,4 @@
-// api/character.js
-import "dotenv/config";
+// routes/character.js
 import { notion } from "../notionClient.js";
 
 export default async function handler(req, res) {
@@ -7,15 +6,10 @@ export default async function handler(req, res) {
     const { char } = req.query;
 
     if (!char) {
-      return res.status(400).json({
-        error: "Missing ?char=PAGE_ID",
-      });
+      return res.status(400).json({ error: "Missing ?char=PAGE_ID" });
     }
 
-    const page = await notion.pages.retrieve({
-      page_id: char,
-    });
-
+    const page = await notion.pages.retrieve({ page_id: char });
     const p = page.properties;
 
     const data = {
