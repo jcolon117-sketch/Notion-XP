@@ -2,7 +2,6 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-import { notion } from "./notionClient.js";
 
 // Import route handlers
 import healthHandler from "./routes/health.js";
@@ -16,21 +15,18 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// ----------------------------
-// HEALTH CHECK
-// ----------------------------
+// Root endpoint
 app.get("/", (req, res) => {
   res.json({ status: "Notion XP API live" });
 });
 
+// API routes
 app.get("/api/health", healthHandler);
 app.get("/api/character", characterHandler);
 app.post("/api/sync", syncHandler);
 app.get("/api/dashboard", dashboardHandler);
 
-// ----------------------------
-// LOCAL DEV LISTENER
-// ----------------------------
+// Local dev listener
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`🚀 Notion XP API server running on port ${PORT}`);

@@ -1,4 +1,3 @@
-// routes/sync.js
 import { syncProgress } from "../systems/syncProgress.js";
 
 export default async function handler(req, res) {
@@ -23,10 +22,6 @@ export default async function handler(req, res) {
       result,
     });
   } catch (err) {
-    console.error("❌ Sync failed:", err);
-    return res.status(500).json({
-      error: "Sync failed",
-      details: err.message,
-    });
+    res.status(500).json({ error: "Sync failed", details: err.message });
   }
 }
