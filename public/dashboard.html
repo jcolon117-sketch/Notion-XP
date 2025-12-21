@@ -7,44 +7,210 @@
     body {
       font-family: system-ui, sans-serif;
       padding: 20px;
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
+      background: #0b1020;
+      color: #f5f5f5;
     }
-    input, button {
-      font-size: 1rem;
-      padding: 8px;
-      margin-top: 10px;
+    h2 {
+      margin-top: 0;
+    }
+    .card {
+      background: #171d33;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #262c47;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input {
       width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #333a5a;
+      background: #0f1425;
+      color: #f5f5f5;
+    }
+    button {
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: none;
+      margin-top: 8px;
+      margin-right: 8px;
+      cursor: pointer;
+      background: #3b82f6;
+      color: white;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
     pre {
-      background: #f4f4f4;
+      background: #0f1425;
       padding: 10px;
+      border-radius: 4px;
       white-space: pre-wrap;
       word-wrap: break-word;
+      border: 1px solid #262c47;
+      font-size: 0.85rem;
+    }
+    .status {
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+    .status.ok {
+      color: #22c55e;
+    }
+    .status.error {
+      color: #f97373;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .row .card {
+      flex: 1 1 200px;
     }
   </style>
 </head>
 <body>
   <h2>🎮 Notion XP Sync Dashboard</h2>
 
-  <label for="charId"><b>Character Page ID:</b></label>
-  <input type="text" id="charId" placeholder="Paste your Notion character page ID" />
+  <div class="card">
+    <label for="charId">Character Page ID</label>
+    <input type="text" id="charId" placeholder="Paste your Notion character page ID" />
 
-  <button onclick="runSync()">🔄 Run Sync</button>
+    <div class="status" id="configStatus"></div>
+  </div>
 
-  <div id="result" style="margin-top: 20px;"></div>
+  <div class="card">
+    <button id="syncBtn" onclick="runSync()">🔄 Run Full Sync</button>
+    <button id="encounterBtn" class="secondary" onclick="runEncounter()">🎲 Run Encounter Only</button>
+    <button id="statsBtn" class="secondary" onclick="loadStats()">📊 View Stats</button>
+
+    <div class="status" id="actionStatus"></div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>Player Stats</h3>
+      <div id="statsView">
+        <p>No stats loaded yet.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Last Sync</h3>
+      <div id="syncView">
+        <p>No sync run yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Last Encounter</h3>
+    <div id="encounterView">
+      <p>No encounter yet.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Raw Result</h3>
+    <pre id="rawView">{ }</pre>
+  </div>
 
   <script>
-    async function runSync() {
-      const charId = document.getElementById("charId").value.trim();
-      const resultDiv = document.getElementById("result");
+    const charInput = document.getElementById("charId");
+    const configStatus = document.getElementById("configStatus");
+    const actionStatus = document.getElementById("actionStatus");
+    const statsView = document.getElementById("statsView");
+    const syncView = document.getElementById("syncView");
+    const encounterView = document.getElementById("encounterView");
+    const rawView = document.getElementById("rawView");
+    const syncBtn = document.getElementById("syncBtn");
+    const encounterBtn = document.getElementById("encounterBtn");
+    const statsBtn = document.getElementById("statsBtn");
 
+    function setButtonsDisabled(disabled) {
+      syncBtn.disabled = disabled;
+      encounterBtn.disabled = disabled;
+      statsBtn.disabled = disabled;
+    }
+
+    async function loadConfig() {
+      configStatus.textContent = "Loading default character...";
+      try {
+        const res = await fetch("/api/config");
+        const data = await res.json();
+
+        if (data.defaultCharId) {
+          charInput.value = data.defaultCharId;
+          configStatus.textContent = "Default character loaded from server.";
+          configStatus.className = "status ok";
+        } else {
+          configStatus.textContent = "No default character set. Using manual input.";
+          configStatus.className = "status";
+        }
+      } catch (err) {
+        configStatus.textContent = "Failed to load default character: " + err.message;
+        configStatus.className = "status error";
+      }
+    }
+
+    async function loadStats() {
+      const charId = charInput.value.trim();
       if (!charId) {
-        resultDiv.innerHTML = "<p style='color:red;'>Please enter a character ID.</p>";
+        actionStatus.textContent = "Please enter a character ID.";
+        actionStatus.className = "status error";
         return;
       }
 
-      resultDiv.innerHTML = "<p>⏳ Syncing...</p>";
+      setButtonsDisabled(true);
+      actionStatus.textContent = "Loading stats...";
+      actionStatus.className = "status";
+
+      try {
+        const res = await fetch(`/api/character?char=${encodeURIComponent(charId)}`);
+        const data = await res.json();
+
+        statsView.innerHTML = `
+          <p><b>Level:</b> ${data.level}</p>
+          <p><b>XP:</b> ${data.currentXP} / ${data.nextLevelXP}</p>
+          <p><b>Energy:</b> ${data.energy} / ${data.maxEnergy}</p>
+          <p><b>Stamina:</b> ${data.stamina} / ${data.maxStamina}</p>
+        `;
+
+        rawView.textContent = JSON.stringify(data, null, 2);
+        actionStatus.textContent = "Stats loaded.";
+        actionStatus.className = "status ok";
+      } catch (err) {
+        actionStatus.textContent = "Failed to load stats: " + err.message;
+        actionStatus.className = "status error";
+      } finally {
+        setButtonsDisabled(false);
+      }
+    }
+
+    async function runSync() {
+      const charId = charInput.value.trim();
+      if (!charId) {
+        actionStatus.textContent = "Please enter a character ID.";
+        actionStatus.className = "status error";
+        return;
+      }
+
+      setButtonsDisabled(true);
+      actionStatus.textContent = "Running full sync...";
+      actionStatus.className = "status";
 
       try {
         const res = await fetch("/api/sync", {
@@ -56,22 +222,91 @@
         const data = await res.json();
 
         if (!data.success) {
-          resultDiv.innerHTML = `<p style='color:red;'>Sync failed: ${data.error}</p>`;
+          actionStatus.textContent = "Sync failed: " + (data.error || "Unknown error");
+          actionStatus.className = "status error";
           return;
         }
 
         const { unlockedGates, encounterResult } = data.result;
 
-        resultDiv.innerHTML = `
-          <h3>✅ Sync Complete</h3>
+        syncView.innerHTML = `
           <p><b>Unlocked Gates:</b> ${unlockedGates.length}</p>
           <p><b>Encounter:</b> ${encounterResult ? encounterResult.title + " (" + encounterResult.result + ")" : "None"}</p>
-          <pre>${JSON.stringify(data.result, null, 2)}</pre>
         `;
+
+        if (encounterResult) {
+          encounterView.innerHTML = `
+            <p><b>Title:</b> ${encounterResult.title}</p>
+            <p><b>Result:</b> ${encounterResult.result}</p>
+            <p><b>XP Gained:</b> ${encounterResult.xp}</p>
+            <p><b>Energy Cost:</b> ${encounterResult.energyCost}</p>
+          `;
+        }
+
+        rawView.textContent = JSON.stringify(data.result, null, 2);
+        actionStatus.textContent = "Sync complete.";
+        actionStatus.className = "status ok";
       } catch (err) {
-        resultDiv.innerHTML = `<p style='color:red;'>Error: ${err.message}</p>`;
+        actionStatus.textContent = "Sync error: " + err.message;
+        actionStatus.className = "status error";
+      } finally {
+        setButtonsDisabled(false);
       }
     }
+
+    async function runEncounter() {
+      const charId = charInput.value.trim();
+      if (!charId) {
+        actionStatus.textContent = "Please enter a character ID.";
+        actionStatus.className = "status error";
+        return;
+      }
+
+      setButtonsDisabled(true);
+      actionStatus.textContent = "Rolling encounter...";
+      actionStatus.className = "status";
+
+      try {
+        const res = await fetch("/api/encounter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ charId })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          actionStatus.textContent = "Encounter failed: " + (data.error || "Unknown error");
+          actionStatus.className = "status error";
+          return;
+        }
+
+        const result = data.result;
+
+        if (!result) {
+          encounterView.innerHTML = `<p>No encounter triggered.</p>`;
+        } else {
+          encounterView.innerHTML = `
+            <p><b>Title:</b> ${result.title}</p>
+            <p><b>Result:</b> ${result.result}</p>
+            <p><b>XP Gained:</b> ${result.xp}</p>
+            <p><b>Energy Cost:</b> ${result.energyCost}</p>
+          `;
+        }
+
+        rawView.textContent = JSON.stringify(data.result, null, 2);
+        actionStatus.textContent = "Encounter complete.";
+        actionStatus.className = "status ok";
+      } catch (err) {
+        actionStatus.textContent = "Encounter error: " + err.message;
+        actionStatus.className = "status error";
+      } finally {
+        setButtonsDisabled(false);
+      }
+    }
+
+    // Auto-load default character on page load
+    loadConfig();
   </script>
 </body>
 </html>
