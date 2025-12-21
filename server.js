@@ -14,7 +14,7 @@ import dashboardHandler from "./routes/dashboard.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Needed for __dirname in ES modules
+// Fix __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend files (dashboard.html, etc.)
+// Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
 // Root endpoint
@@ -36,7 +36,7 @@ app.get("/api/character", characterHandler);
 app.post("/api/sync", syncHandler);
 app.get("/api/dashboard", dashboardHandler);
 
-// Local dev listener (Vercel ignores this)
+// Local dev listener
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`🚀 Notion XP API server running on port ${PORT}`);
